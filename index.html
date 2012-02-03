@@ -1,0 +1,223 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Search Flattr</title>
+    <!--[if (!IE)|(gte IE 8)]><!-->
+      <link href="css/visualsearch-datauri.css" media="screen" rel="stylesheet" type="text/css" />
+    <!--<![endif]-->
+    <!--[if lte IE 7]><!-->
+      <link href="css/visualsearch.css" media="screen" rel="stylesheet" type="text/css" />
+    <!--<![endif]-->
+    <link rel="stylesheet" href="css/github.css" type="text/css"
+    media="screen" charset="utf-8">
+    <script src="js/dependencies.js" type="text/javascript"
+      charset="utf-8"></script>
+    <script src="js/visualsearch.js" type="text/javascript"
+      charset="utf-8"></script>
+    <script src="http://api.flattr.com/js/0.6/load.js?mode=manual" type="text/javascript"
+      charset="utf-8"></script>
+    <link href='http://fonts.googleapis.com/css?family=Gentium+Book+Basic:400italic'
+    rel='stylesheet' type='text/css'>
+    <style>
+      body{
+        font-family: "Helvetica Neue";
+        color: #333;
+      }
+      a {
+        color: #f04;
+      }
+      em {
+        font-family: 'Gentium Book Basic', serif;
+        /*300 18px/24px "open sans";*/
+        color: #aaa;
+        font-size: 14px;
+        font-weight: 300;
+      }
+      em a {
+        color: #aaa;
+      }
+      em a:hover {
+        color: #666;
+      }
+      #content {
+        width: 600px;
+        margin: 20px auto;
+      }
+      .thing {
+        padding: 40px 0;
+        clear:both;
+      }
+      .thing img {
+      }
+      .thing .img a {
+      }
+      .thing .img {
+        float: left;
+        padding-right: 5px;
+        width: 123px;
+      }
+      .thing .info {
+        float: left;
+        width: 465px;
+      }
+      .thing .image-wrapper {
+        border: 1px solid #ddd;
+        width: 60px;
+        height: 60px;
+        float: left;
+        margin-right: 5px;
+        }
+      dl {
+        padding: 0;
+        margin: 0;
+      }
+      dl dd {
+        padding: 0;
+        margin: 0;
+        font-size: 11px;
+        color: #666;
+        line-height: 20px;
+      }
+      .thing dt {
+        font-size: 18px;
+        font-weight: bold;
+      }
+      footer {
+        font-size: 12px;
+        color: #ccc;
+        text-align: center;
+        padding-top: 30px;
+        margin-bottom: 30px;
+        clear:both;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="content">
+      <div class="visual_search"></div>
+      <div id="things"></div>
+      <footer>Maby by Simon Gate &lt;simon@smgt.me&gt;</footer>
+    </div>
+  <script id="thingTemplate" type="text/template">
+    <div class="img">
+      <a href="<%= url %>"><div class="image-wrapper"><img src="<%= image %>"></div></a><a class="FlattrButton" style="display:none;"
+        title="<%= title %>"
+        data-flattr-uid="<%= owner.username %>"
+        href="<%=url%>">
+        <%= description %>
+      </a>
+    </div>
+    <div class="info">
+      <dl>
+        <dt><a href="<%= url %>"><%= title %></a> <em>by 
+            <a href="http://flattr.com/profile/<%= owner.username%>">
+              <%= owner.username %></a></em></dt>
+        <dd><%= description %></dd>
+      </dl>
+    </div>
+  </script>
+  <script type="text/javascript" charset="utf-8">
+    $(document).ready(function() {
+
+      Thing = Backbone.Model.extend({
+        });
+
+      Things = Backbone.Collection.extend({
+          model: Thing,
+        });
+
+      ThingView = Backbone.View.extend({
+          className: "thing",
+          //tagName: 'li',
+          //model: new Thing,
+          initialize: function() {
+            //this.model.bind("change", this.render, this);
+          },
+          render: function() {
+            compiledTemplate = _.template($('#thingTemplate').html());
+            $(this.el).html(compiledTemplate(this.model.toJSON()));
+            return this;
+          }
+        });
+
+      ThingListView = Backbone.View.extend({
+          el: $("#things")[0],
+          initialize: function() {
+            _.bindAll(this, 'render');
+            this.render();
+          },
+          render: function() {
+            var that = this;
+            $(this.el).html("");
+            _(this.collection.models).each(function(item){
+              item = new ThingView({model: item});
+              $(that.el).append(item.render().el);
+            });
+            FlattrLoader.setup();
+            return this;
+          }
+        });
+
+      var visualSearch = VS.init({
+        container : $('.visual_search'),
+        query     : 'category: software text: ruby',
+        callbacks : {
+          search       : function(query, searchCollection) {
+            facets = searchCollection.map(function(item) {
+              item = item.toJSON();
+              if(item.category === "text") {
+                item.category = "query";
+              }
+              return {value: item.value, name: item.category};
+              });
+            facets.push({name:"count",value:"15"});
+            facets.push({name:"sort",value:"trend"});
+            params = $.param(facets);
+            $.getJSON("https://api.flattr.com/rest/v2/things/search?"+params,
+              function(data) {
+                if(data.things) {
+                  collection = new Things(data.things);
+                  new ThingListView({collection: collection});
+                }
+              });
+          },
+          facetMatches : function(callback) {
+          callback([
+            'sort', 'category', 'tags', 'language'
+            ]);
+
+          },
+          valueMatches : function(facet, searchTerm, callback) {
+            switch(facet) {
+              case 'sort':
+                callback([
+                    {value: 'trend', label: "Trending"},
+                    {value: 'top', label: "Toplist"},
+                    {value: 'relevance', label: "Relavance"}
+                  ]);
+                break;
+              case 'category':
+                $.getJSON("https://api.flattr.com/rest/v2/categories.json",
+                    function(data) {
+                      collection = _.map(data, function(obj) { return {value: obj.id, label: obj.text} });
+                      callback(collection);
+                    }
+                  );
+                break;
+              case 'language':
+                $.getJSON("https://api.flattr.com/rest/v2/languages.json",
+                    function(data) {
+                      collection = _.map(data, function(obj) { return {value: obj.id, label: obj.text} });
+                      callback(collection);
+                    }
+                  );
+                break;
+            };
+
+          }
+        }
+      });
+    });
+  </script>
+  </body>
+</html>
