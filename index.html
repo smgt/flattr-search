@@ -24,7 +24,7 @@
         color: #333;
       }
       a {
-        color: #f04;
+        color: #1ce5af;
       }
       em {
         font-family: 'Gentium Book Basic', serif;
@@ -40,33 +40,37 @@
         color: #666;
       }
       #content {
-        width: 600px;
+        width: 770px;
         margin: 20px auto;
       }
       .thing {
-        padding: 40px 0;
-        clear:both;
+        margin: 5px;
+        width: 240px;
+        height: 240px;
+        float: left;
+        border: 1px solid #ddd;
       }
       .thing img {
       }
       .thing .img a {
       }
       .thing .img {
-        float: left;
-        padding-right: 5px;
-        width: 123px;
+        position: relative;
       }
+
       .thing .info {
-        float: left;
-        width: 465px;
+        background-color: #333;
+        position: absolute;
+        bottom: 3px;
+        font-size: 14px;
+        padding: 4px 5px;
+        max-width: 160px;
       }
+
       .thing .image-wrapper {
-        border: 1px solid #ddd;
-        width: 60px;
-        height: 60px;
-        float: left;
-        margin-right: 5px;
-        }
+        height: 240px;
+      }
+
       dl {
         padding: 0;
         margin: 0;
@@ -90,6 +94,11 @@
         margin-bottom: 30px;
         clear:both;
       }
+      .FlattrButton {
+        position: absolute;
+        bottom: 3px;
+        right: 3px;
+      }
     </style>
   </head>
   <body>
@@ -100,26 +109,34 @@
     </div>
   <script id="thingTemplate" type="text/template">
     <div class="img">
-      <a href="<%= url %>"><div class="image-wrapper"><img src="<%= image %>"></div></a><a class="FlattrButton" style="display:none;"
+    <div class="info">
+      <a href="<%= url %>"><%= title %></a><br/>
+      <em>by <a href="http://flattr.com/profile/<%= owner.username%>"> <%= owner.username %></a></em>
+    </div>
+      <a href="<%= url %>">
+        <div class="image-wrapper">
+          <img src="<%= image %>">
+        </div>
+        </a>
+        <a class="FlattrButton" style="display:none;"
         title="<%= title %>"
         data-flattr-uid="<%= owner.username %>"
+        data-flattr-button="button"
         href="<%=url%>">
         <%= description %>
       </a>
     </div>
-    <div class="info">
-      <dl>
-        <dt><a href="<%= url %>"><%= title %></a> <em>by 
-            <a href="http://flattr.com/profile/<%= owner.username%>">
-              <%= owner.username %></a></em></dt>
-        <dd><%= description %></dd>
-      </dl>
-    </div>
   </script>
   <script type="text/javascript" charset="utf-8">
-    $(document).ready(function() {
 
       Thing = Backbone.Model.extend({
+          initialize: function() {
+            var image = this.get("image");
+            console.log(image);
+            if(image) {
+              this.set({image: image.replace(/medium/, "huge")});
+            }
+          }
         });
 
       Things = Backbone.Collection.extend({
@@ -129,7 +146,7 @@
       ThingView = Backbone.View.extend({
           className: "thing",
           //tagName: 'li',
-          //model: new Thing,
+          model: new Thing,
           initialize: function() {
             //this.model.bind("change", this.render, this);
           },
@@ -160,7 +177,7 @@
 
       var visualSearch = VS.init({
         container : $('.visual_search'),
-        query     : '',
+        query     : 'smgt',
         callbacks : {
           search       : function(query, searchCollection) {
             facets = searchCollection.map(function(item) {
@@ -192,7 +209,9 @@
               case 'sort':
                 callback([
                     {value: 'trend', label: "Trending"},
-                    {value: 'top', label: "Toplist"},
+                    {value: 'flattrs', label: "Flattrs"},
+                    {value: 'flattrs_week', label: "Flattrs last 7 days"},
+                    {value: 'flattrs_month', label: "Flattrs last 30 days"},
                     {value: 'relevance', label: "Relavance"}
                   ]);
                 break;
@@ -217,7 +236,6 @@
           }
         }
       });
-    });
   </script>
   </body>
 </html>
